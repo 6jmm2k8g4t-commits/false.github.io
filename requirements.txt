@@ -2,6 +2,11 @@
 pandas==2.2.3
 numpy==2.1.0
 
+# 科学计算（Python 3.13 兼容版本）
+scipy==1.14.0
+statsmodels==0.14.2
+prophet==1.1.5
+
 # Web 框架
 flask==3.0.0
 flask-cors==4.0.0
