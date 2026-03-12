@@ -59,6 +59,20 @@ def health_check():
         'version': '2.0.0'
     })
 
+# 根路由测试
+@app.route('/')
+def root():
+    """根路由"""
+    return jsonify({
+        'message': 'Welcome to Earthquake API',
+        'endpoints': {
+            'health': '/api/health',
+            'stats': '/api/stats',
+            'time-series': '/api/time-series',
+            'high-risk-regions': '/api/high-risk-regions'
+        }
+    })
+
 df = None
 df_filtered_cache = {}
 
