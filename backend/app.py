@@ -130,13 +130,28 @@ def get_location_name(lat, lon):
 def load_data():
     global df, _high_risk_regions_cache
     try:
-        # 支持环境变量配置数据文件路径（用于云部署）
-        data_file = os.environ.get('DATA_FILE_PATH', '/data/earthquake_dataset.csv')
-        full_path = os.path.join(os.path.dirname(__file__), data_file)
+    # 支持从 URL 下载数据文件（用于云部署）
+    data_url = os.environ.get('DATA_FILE_URL', 'https://raw.githubusercontent.com/6jmm2k8g4t-commits/false.github.io/main/earthquake_dataset.csv')
+    data_file = os.environ.get('DATA_FILE_PATH', '/data/earthquake_dataset.csv')
+    
+    # 如果文件不存在，尝试从 GitHub 下载
+    if not os.path.exists(data_file):
+        print(f"数据文件不存在，正在从 GitHub 下载：{data_url}")
+        import requests
+        response = requests.get(data_url, timeout=60)
+        response.raise_for_status()
         
-        # 如果相对路径找不到，尝试绝对路径
-        if not os.path.exists(full_path) and os.path.exists(data_file):
-            full_path = data_file
+        # 保存到本地
+        os.makedirs(os.path.dirname(data_file), exist_ok=True)
+        with open(data_file, 'wb') as f:
+            f.write(response.content)
+        print(f"✅ 数据文件已下载到：{data_file} ({len(response.content)} bytes)")
+    
+    full_path = data_file
+    
+    # 如果相对路径找不到，尝试绝对路径
+    if not os.path.exists(full_path) and os.path.exists(data_file):
+        full_path = data_file
             
         if os.path.exists(full_path):
             usecols = ['time', 'latitude', 'longitude', 'depth', 'magnitude']
