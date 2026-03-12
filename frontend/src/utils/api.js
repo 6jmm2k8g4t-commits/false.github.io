@@ -10,7 +10,7 @@ const getBaseURL = () => {
   
   // GitHub Pages 部署环境 - 使用 Railway 后端
   if (hostname.includes('github.io')) {
-    return 'https://earthquake-backend-production-0098.up.railway.app'
+    return 'https://earthquake-backend-production-d098.up.railway.app'
   }
   
   // 其他生产环境
