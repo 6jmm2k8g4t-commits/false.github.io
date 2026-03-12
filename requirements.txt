@@ -2,9 +2,9 @@
 pandas==2.2.3
 numpy==2.1.0
 
-# 科学计算（Python 3.13 兼容版本）
-scipy==1.14.0
-statsmodels==0.14.2
+# 科学计算（Python 3.13 兼容版本 - 使用预编译 wheel）
+scipy==1.15.0
+statsmodels==0.14.4
 prophet==1.1.5
 
 # Web 框架
