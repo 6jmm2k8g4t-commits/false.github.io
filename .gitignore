@@ -27,5 +27,5 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 
-# Large data files (optional, if you want to exclude)
-# earthquake_dataset.csv
+# Large data files (excluded from GitHub)
+earthquake_dataset.csv
