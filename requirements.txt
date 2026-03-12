@@ -1,6 +1,6 @@
 # 核心依赖（Python 3.13 兼容版本）
-pandas==2.2.0
-numpy==1.26.3
+pandas==2.2.3
+numpy==2.1.0
 
 # Web 框架
 flask==3.0.0
