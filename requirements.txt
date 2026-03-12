@@ -4,7 +4,7 @@ numpy==2.1.0
 
 # Scientific computing (Python 3.13 compatible) - Pre-built wheels
 scipy==1.15.0
-statsmodels==0.14.4
+statsmodels==0.14.5
 prophet==1.3.0
 
 # Visualization
