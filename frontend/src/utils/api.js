@@ -8,10 +8,9 @@ const getBaseURL = () => {
     return 'http://localhost:8090'
   }
   
-  // GitHub Pages 部署环境 - 使用 Render 后端
+  // GitHub Pages 部署环境 - 使用 Railway 后端
   if (hostname.includes('github.io')) {
-    // 替换为你的 Render 后端地址
-    return 'https://earthquake-backend.onrender.com'
+    return 'https://earthquake-backend-production-0098.up.railway.app'
   }
   
   // 其他生产环境
