@@ -21,9 +21,10 @@ try:
     from statsmodels.tsa.arima.model import ARIMA
     from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
     STATSMODELS_AVAILABLE = True
-except ImportError:
+    print("✅ statsmodels 已成功安装并导入")
+except ImportError as e:
     STATSMODELS_AVAILABLE = False
-    print("⚠️ statsmodels 未安装，将使用模拟预测")
+    print(f"⚠️ statsmodels 未安装，将使用模拟预测。错误：{e}")
 
 try:
     from scipy.stats import gaussian_kde
