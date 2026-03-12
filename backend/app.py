@@ -131,7 +131,7 @@ def load_data():
     global df, _high_risk_regions_cache
     try:
         # 支持环境变量配置数据文件路径（用于云部署）
-        data_file = os.environ.get('DATA_FILE_PATH', '../earthquake_dataset.csv')
+        data_file = os.environ.get('DATA_FILE_PATH', '/data/earthquake_dataset.csv')
         full_path = os.path.join(os.path.dirname(__file__), data_file)
         
         # 如果相对路径找不到，尝试绝对路径
