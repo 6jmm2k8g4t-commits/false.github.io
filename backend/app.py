@@ -47,6 +47,18 @@ CORS(app)
 app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
+# 健康检查接口
+@app.route('/api/health')
+def health_check():
+    """健康检查接口"""
+    from datetime import datetime
+    return jsonify({
+        'status': 'ok',
+        'message': 'Earthquake API is running',
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'version': '2.0.0'
+    })
+
 df = None
 df_filtered_cache = {}
 
