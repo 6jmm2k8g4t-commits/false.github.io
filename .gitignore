@@ -26,6 +26,3 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
-
-# Large data files (excluded from GitHub)
-earthquake_dataset.csv
