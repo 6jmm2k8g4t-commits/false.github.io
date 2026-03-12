@@ -129,7 +129,7 @@ def get_location_name(lat, lon):
 
 def load_data():
     """加载地震数据"""
-    global df, _high_risk_regions_cache
+    global df
     try:
         # 支持从 URL 下载数据文件（用于云部署）
         data_url = os.environ.get('DATA_FILE_URL', 'https://raw.githubusercontent.com/6jmm2k8g4t-commits/false.github.io/main/earthquake_dataset.csv')
@@ -149,10 +149,10 @@ def load_data():
             print(f"✅ 数据文件已下载到：{data_file} ({len(response.content)} bytes)")
         
         full_path = data_file
-    
-    # 如果相对路径找不到，尝试绝对路径
-    if not os.path.exists(full_path) and os.path.exists(data_file):
-        full_path = data_file
+        
+        # 如果相对路径找不到，尝试绝对路径
+        if not os.path.exists(full_path) and os.path.exists(data_file):
+            full_path = data_file
             
         if os.path.exists(full_path):
             usecols = ['time', 'latitude', 'longitude', 'depth', 'magnitude']
