@@ -154,12 +154,98 @@ const loadData = async () => {
     const response = await axios.get(`/api/time-series?granularity=${timeGranularity.value}&magnitude=all&_t=${timestamp}`)
     
     if (response.data.success && response.data.data) {
-      rawData.value = response.data.data
-      console.log('加载数据:', timeGranularity.value, rawData.value.categories.slice(0, 5))
+      let data = response.data.data
+      
+      // 前端补全数据到2026年当前季度
+      data = completeDataTo2026(data, timeGranularity.value)
+      
+      rawData.value = data
+      console.log('加载数据:', timeGranularity.value, rawData.value.categories.slice(0, 5), '...', rawData.value.categories.slice(-3))
       updateChart()
     }
   } catch (error) {
     console.error('加载图表数据失败:', error)
+  }
+}
+
+// 补全数据到2026年当前季度
+const completeDataTo2026 = (data, granularity) => {
+  const categories = [...data.categories]
+  const frequency = [...data.frequency]
+  const magnitude = [...data.magnitude]
+  const completeness = [...data.completeness]
+  
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth() + 1
+  const currentQuarter = Math.ceil(currentMonth / 3)
+  
+  // 获取最后一个数据点的时间
+  const lastCategory = categories[categories.length - 1]
+  
+  if (granularity === 'quarterly') {
+    // 解析最后一个季度
+    const match = lastCategory.match(/(\d{4})Q(\d)/)
+    if (match) {
+      let lastYear = parseInt(match[1])
+      let lastQuarter = parseInt(match[2])
+      
+      // 生成从最后一个季度到2026年当前季度的所有季度
+      while (lastYear < currentYear || (lastYear === currentYear && lastQuarter < currentQuarter)) {
+        lastQuarter++
+        if (lastQuarter > 4) {
+          lastQuarter = 1
+          lastYear++
+        }
+        const newCategory = `${lastYear}Q${lastQuarter}`
+        categories.push(newCategory)
+        frequency.push(0)
+        magnitude.push(0)
+        // 2026年的数据标记为不完整
+        completeness.push(lastYear !== currentYear)
+      }
+    }
+  } else if (granularity === 'monthly') {
+    // 解析最后一个月份
+    const match = lastCategory.match(/(\d{4})-(\d{2})/)
+    if (match) {
+      let lastYear = parseInt(match[1])
+      let lastMonth = parseInt(match[2])
+      
+      // 生成从最后一个月份到2026年当前月的所有月份
+      while (lastYear < currentYear || (lastYear === currentYear && lastMonth < currentMonth)) {
+        lastMonth++
+        if (lastMonth > 12) {
+          lastMonth = 1
+          lastYear++
+        }
+        const newCategory = `${lastYear}-${String(lastMonth).padStart(2, '0')}`
+        categories.push(newCategory)
+        frequency.push(0)
+        magnitude.push(0)
+        // 2026年的数据标记为不完整
+        completeness.push(lastYear !== currentYear)
+      }
+    }
+  } else if (granularity === 'yearly') {
+    // 解析最后一年
+    const lastYear = parseInt(lastCategory)
+    
+    // 生成从最后一年到2026年的所有年份
+    for (let y = lastYear + 1; y <= currentYear; y++) {
+      categories.push(String(y))
+      frequency.push(0)
+      magnitude.push(0)
+      // 2026年标记为不完整
+      completeness.push(y !== currentYear)
+    }
+  }
+  
+  return {
+    categories,
+    frequency,
+    magnitude,
+    completeness
   }
 }
 
