@@ -136,11 +136,25 @@ def load_data():
         data_url = os.environ.get('DATA_FILE_URL', 'https://raw.githubusercontent.com/6jmm2k8g4t-commits/false.github.io/main/earthquake_dataset.csv')
         data_file = os.environ.get('DATA_FILE_PATH', '/data/earthquake_dataset.csv')
         
-        # 如果文件不存在，尝试从 GitHub 下载
+        # 检查文件是否需要重新下载
+        need_download = False
+        
         if not os.path.exists(data_file):
-            print(f"数据文件不存在，正在从 GitHub 下载：{data_url}")
+            print(f"📥 数据文件不存在，正在从 GitHub 下载：{data_url}")
+            need_download = True
+        else:
+            # 检查文件是否是 Git LFS 指针文件（很小）或空文件
+            file_size = os.path.getsize(data_file)
+            if file_size < 10000:  # 小于 10KB 可能是 LFS 指针
+                print(f"⚠️ 文件太小 ({file_size} bytes)，可能是 Git LFS 指针，重新下载...")
+                need_download = True
+            else:
+                print(f"✅ 使用现有数据文件：{data_file} ({file_size} bytes)")
+        
+        # 下载文件
+        if need_download:
             import requests
-            response = requests.get(data_url, timeout=60)
+            response = requests.get(data_url, timeout=120)
             response.raise_for_status()
             
             # 保存到本地
