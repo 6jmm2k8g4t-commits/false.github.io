@@ -39,7 +39,7 @@ try:
     PROPHET_AVAILABLE = True
 except ImportError:
     PROPHET_AVAILABLE = False
-    print("⚠️ prophet 未安装，Prophet 模型将使用模拟预测")
+    print("⚠️ prophet 未安装，Prophet模型将使用模拟预测")
 
 app = Flask(__name__)
 CORS(app)
@@ -156,8 +156,38 @@ def load_data():
             full_path = data_file
             
         if os.path.exists(full_path):
-            usecols = ['time', 'latitude', 'longitude', 'depth', 'magnitude']
-            df = pd.read_csv(full_path, usecols=usecols)
+            # 先读取文件查看列名
+            temp_df = pd.read_csv(full_path, nrows=1)
+            print(f"📋 CSV 文件列名：{list(temp_df.columns)}")
+            
+            # 使用列名索引而不是列名（避免列名不匹配问题）
+            df = pd.read_csv(full_path)
+            
+            # 确保使用正确的列名（去除空格）
+            df.columns = df.columns.str.strip()
+            
+            # 重命名列以确保一致性
+            column_mapping = {
+                'time': 'time',
+                'latitude': 'latitude', 
+                'longitude': 'longitude',
+                'depth': 'depth',
+                'magnitude': 'magnitude'
+            }
+            
+            # 检查必需的列是否存在
+            required_cols = ['time', 'latitude', 'longitude', 'depth', 'magnitude']
+            missing_cols = [col for col in required_cols if col not in df.columns]
+            
+            if missing_cols:
+                print(f"⚠️ 缺少必需的列：{missing_cols}")
+                print(f"当前列名：{list(df.columns)}")
+                df = None
+                return
+            
+            # 只保留需要的列
+            df = df[required_cols]
+            
             df['time'] = pd.to_datetime(df['time'], format='mixed', utc=True)
             df['year'] = df['time'].dt.year
             df['month'] = df['time'].dt.to_period('M').astype(str)
@@ -172,18 +202,18 @@ def load_data():
             print("⚠️ 数据文件不存在")
             df = None
     except Exception as e:
-        print(f"⚠️ 加载失败：{e}")
+        print(f"⚠️ 加载失败: {e}")
         import traceback
         print(traceback.format_exc())
         df = None
 
-# ✅ 关键修复：在 load_data() 函数定义之后立即调用
+# 在模块加载时立即加载数据（用于云平台部署）
 print("🔄 开始加载地震数据...")
 load_data()
 
 @app.route('/')
 def index():
-    """服务 Vue3 前端"""
+    """服务Vue3前端"""
     try:
         vue_index = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist', 'index.html')
         if os.path.exists(vue_index):
@@ -195,23 +225,23 @@ def index():
             with open(dashboard_path, 'r', encoding='utf-8') as f:
                 return f.read()
     except Exception as e:
-        return f"<h1>错误</h1><p>无法加载页面：{e}</p>", 500
+        return f"<h1>错误</h1><p>无法加载页面: {e}</p>", 500
 
 @app.route('/<path:path>')
 def serve_static(path):
-    """服务 Vue3 静态文件"""
+    """服务Vue3静态文件"""
     try:
         dist_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist')
         file_path = os.path.join(dist_path, path)
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return send_from_directory(dist_path, path)
         else:
-            # 对于前端路由，返回 index.html
+            # 对于前端路由，返回index.html
             vue_index = os.path.join(dist_path, 'index.html')
             with open(vue_index, 'r', encoding='utf-8') as f:
                 return f.read()
     except Exception as e:
-        return f"<h1>错误</h1><p>无法加载资源：{e}</p>", 404
+        return f"<h1>错误</h1><p>无法加载资源: {e}</p>", 404
 
 @app.route('/api/time-series')
 def get_time_series():
@@ -271,12 +301,12 @@ def get_time_series():
                 'categories': categories,
                 'frequency': grouped['frequency'].tolist(),
                 'magnitude': grouped['avg_magnitude'].round(2).tolist(),
-                'completeness': completeness  # True=完整，False=不完整
+                'completeness': completeness  # True=完整, False=不完整
             }
         })
     except Exception as e:
         import traceback
-        print(f"时序数据错误：{e}")
+        print(f"时序数据错误: {e}")
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -600,7 +630,7 @@ def predict():
         
     except Exception as e:
         import traceback
-        print(f"预测错误：{e}")
+        print(f"预测错误: {e}")
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -639,15 +669,15 @@ def run_prediction_model(history_values, model_type, horizon):
             print("DEBUG: Calling simple_predict (fallback)")
             return simple_predict(history_values, horizon)
     except Exception as e:
-        print(f"模型 {model_type} 预测失败：{e}")
+        print(f"模型 {model_type} 预测失败: {e}")
         return simple_predict(history_values, horizon)
 
 def arima_predict(history_values, horizon):
-    """ARIMA 模型预测 - 优化版本"""
+    """ARIMA模型预测 - 优化版本"""
     try:
         from statsmodels.tsa.arima.model import ARIMA
         
-        # 尝试多个 ARIMA 配置，选择最佳模型
+        # 尝试多个ARIMA配置，选择最佳模型
         best_aic = float('inf')
         best_model = None
         best_fitted = None
@@ -683,7 +713,7 @@ def arima_predict(history_values, horizon):
         # 计算基础指标
         r2 = r2_score(actual, pred)
         
-        # ARIMA 模型优化：如果 R²太低，使用平滑处理提升性能指标
+        # ARIMA模型优化：如果R²太低，使用平滑处理提升性能指标
         if r2 < 0.75:
             # 使用指数平滑优化拟合值
             alpha = 0.3
@@ -709,23 +739,23 @@ def arima_predict(history_values, horizon):
         
         return predictions, metrics
     except Exception as e:
-        print(f"ARIMA 预测失败：{e}")
+        print(f"ARIMA预测失败: {e}")
         return simple_predict(history_values, horizon)
 
 _prophet_cache = {}
 
 def prophet_predict(history_values, horizon):
-    """Prophet 模型预测 - 优化参数提升性能"""
+    """Prophet模型预测 - 优化参数提升性能"""
     try:
         from prophet import Prophet
         
-        # 准备 Prophet 格式数据
+        # 准备Prophet格式数据
         df_prophet = pd.DataFrame({
             'ds': pd.date_range(start='2020-01-01', periods=len(history_values), freq='ME'),
             'y': history_values
         })
         
-        # 高度优化的 Prophet 模型参数
+        # 高度优化的Prophet模型参数
         model = Prophet(
             growth='linear',                  # 线性增长模式
             yearly_seasonality=True,
@@ -770,7 +800,7 @@ def prophet_predict(history_values, horizon):
         
         return predictions, metrics
     except Exception as e:
-        print(f"Prophet 预测失败：{e}")
+        print(f"Prophet预测失败: {e}")
         return simple_predict(history_values, horizon)
 
 def ensemble_predict(history_values, horizon):
@@ -890,7 +920,7 @@ def calculate_metrics(actual, predicted):
             'mape': round(mape, 1)
         }
     except Exception as e:
-        print(f"计算指标失败：{e}")
+        print(f"计算指标失败: {e}")
         return {'r2': 0.85, 'mae': 0.15, 'rmse': 0.20, 'mape': 8.0}
 
 @app.route('/api/earthquake-distribution')
@@ -926,7 +956,7 @@ def _compute_high_risk_regions():
     if df is None:
         return None
     
-    # 使用 numpy 进行高性能计算
+    # 使用numpy进行高性能计算
     lat = df['latitude'].values
     lon = df['longitude'].values
     mag = df['magnitude'].values
@@ -958,7 +988,7 @@ def _compute_high_risk_regions():
     for condition, name in conditions:
         regions[condition] = name
     
-    # 使用 numba 加速的聚合计算
+    # 使用numba加速的聚合计算
     unique_regions = np.unique(regions)
     result = []
     
@@ -978,7 +1008,7 @@ def _compute_high_risk_regions():
 
 @app.route('/api/high-risk-regions')
 def get_high_risk_regions():
-    """获取高风险区域 TOP10 - 使用缓存"""
+    """获取高风险区域TOP10 - 使用缓存"""
     try:
         if df is None:
             return jsonify({'success': False, 'error': '数据未加载'}), 500
@@ -1002,7 +1032,7 @@ def get_high_risk_regions():
         return jsonify({'success': True, 'data': data[:limit]})
     except Exception as e:
         import traceback
-        print(f"高风险区域错误：{e}")
+        print(f"高风险区域错误: {e}")
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -1036,7 +1066,7 @@ def get_major_earthquakes():
 @app.route('/api/kernel-density')
 def get_kernel_density():
     """
-    核密度估计 API - 计算地震空间分布的概率密度
+    核密度估计API - 计算地震空间分布的概率密度
     使用高斯核函数进行二维核密度估计
     """
     try:
@@ -1060,7 +1090,7 @@ def get_kernel_density():
         lat_grid = np.linspace(-90, 90, grid_size)
         lon_mesh, lat_mesh = np.meshgrid(lon_grid, lat_grid)
         
-        # 强制使用 simple_kde_2d 函数，gaussian_kde 的归一化会导致数据点过少
+        # 强制使用simple_kde_2d函数，gaussian_kde的归一化会导致数据点过少
         density = simple_kde_2d(lons, lats, lon_mesh, lat_mesh, bandwidth)
         
         # 不做归一化，直接使用原始密度值
@@ -1088,14 +1118,14 @@ def get_kernel_density():
         })
     except Exception as e:
         import traceback
-        print(f"核密度估计错误：{e}")
+        print(f"核密度估计错误: {e}")
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
 def simple_kde_2d(lons, lats, lon_mesh, lat_mesh, bandwidth):
     """
     简化的二维核密度估计实现
-    使用高斯核函数：K(u) = (1/(2π)) * exp(-u²/2)
+    使用高斯核函数: K(u) = (1/(2π)) * exp(-u²/2)
     """
     grid_shape = lon_mesh.shape
     density = np.zeros(grid_shape)
@@ -1123,7 +1153,7 @@ def simple_kde_2d(lons, lats, lon_mesh, lat_mesh, bandwidth):
 @app.route('/api/risk-zones')
 def get_risk_zones():
     """
-    风险区域划分 API - 基于核密度估计和震级分布划分高/中/低三级风险区域
+    风险区域划分API - 基于核密度估计和震级分布划分高/中/低三级风险区域
     """
     try:
         if df is None:
@@ -1193,7 +1223,7 @@ def get_risk_zones():
         })
     except Exception as e:
         import traceback
-        print(f"风险区域划分错误：{e}")
+        print(f"风险区域划分错误: {e}")
         print(traceback.format_exc())
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -1206,7 +1236,7 @@ if __name__ == '__main__':
     # 支持云平台的 PORT 环境变量
     port = int(os.environ.get('PORT', 8090))
     
-    print(f'📍 访问地址：http://localhost:{port}')
+    print(f'📍 访问地址: http://localhost:{port}')
     print('✨ 功能特性:')
     print('   - 主题切换 (浅色/深色)')
     print('   - 视图切换 (图表/列表)')
