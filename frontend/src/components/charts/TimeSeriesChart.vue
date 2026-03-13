@@ -280,6 +280,7 @@ const updateChart = () => {
   const data = rawData.value
   const config = granularityConfig.value
   const granularity = timeGranularity.value
+  // eslint-disable-next-line no-unused-vars
   const dataLength = data.categories.length
   
   const freqRange = calculateYAxisRange(data.frequency, 0.15)
@@ -501,9 +502,13 @@ const updateChart = () => {
           fontSize: 11
         },
         labelFormatter: (value) => {
-          const idx = Math.floor(value / 100 * (dataLength - 1))
-          const category = data.categories[Math.min(idx, dataLength - 1)]
-          return formatTimeLabel(category, granularity)
+          // 使用 rawData.value 获取最新数据，避免闭包问题
+          const currentData = rawData.value
+          const currentLength = currentData.categories.length
+          const currentGranularity = timeGranularity.value
+          const idx = Math.floor(value / 100 * (currentLength - 1))
+          const category = currentData.categories[Math.min(idx, currentLength - 1)]
+          return formatTimeLabel(category, currentGranularity)
         }
       }
     ],
