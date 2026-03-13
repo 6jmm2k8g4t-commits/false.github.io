@@ -154,123 +154,15 @@ const loadData = async () => {
     const response = await axios.get(`/api/time-series?granularity=${timeGranularity.value}&magnitude=all&_t=${timestamp}`)
     
     if (response.data.success && response.data.data) {
-      let data = response.data.data
+      const data = response.data.data
       
-      // 前端补全数据到2026年当前季度
-      data = completeDataTo2026(data, timeGranularity.value)
-      
+      // 后端已经补全数据到2026年，前端直接使用
       rawData.value = data
-      console.log('加载数据:', timeGranularity.value, rawData.value.categories.slice(0, 5), '...', rawData.value.categories.slice(-3))
+      console.log('加载数据:', timeGranularity.value, '长度:', data.categories.length, '范围:', data.categories[0], '到', data.categories[data.categories.length - 1])
       updateChart()
     }
   } catch (error) {
     console.error('加载图表数据失败:', error)
-  }
-}
-
-// 补全数据到2026年当前季度
-const completeDataTo2026 = (data, granularity) => {
-  console.log('completeDataTo2026 输入:', granularity, data.categories.slice(-3))
-  
-  const categories = [...data.categories]
-  const frequency = [...data.frequency]
-  const magnitude = [...data.magnitude]
-  const completeness = [...data.completeness]
-  
-  const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth() + 1
-  const currentQuarter = Math.ceil(currentMonth / 3)
-  
-  console.log('当前时间:', currentYear, '年', currentMonth, '月', 'Q', currentQuarter)
-  
-  // 获取最后一个数据点的时间
-  const lastCategory = categories[categories.length - 1]
-  console.log('最后一个数据:', lastCategory)
-  
-  if (granularity === 'quarterly') {
-    // 解析最后一个季度 - 支持 2020Q1 或 2020-03 格式
-    let match = lastCategory.match(/(\d{4})Q(\d)/)
-    
-    // 如果不是 Q 格式，尝试从月份格式转换
-    if (!match) {
-      const monthMatch = lastCategory.match(/(\d{4})-(\d{2})/)
-      if (monthMatch) {
-        const year = monthMatch[1]
-        const month = parseInt(monthMatch[2])
-        const quarter = Math.ceil(month / 3)
-        match = [null, year, String(quarter)]
-        console.log('从月份格式转换:', lastCategory, '->', year + 'Q' + quarter)
-      }
-    }
-    
-    if (match) {
-      let lastYear = parseInt(match[1])
-      let lastQuarter = parseInt(match[2])
-      
-      console.log('开始补全季度:', lastYear, 'Q', lastQuarter, '->', currentYear, 'Q', currentQuarter)
-      
-      // 生成从最后一个季度到2026年当前季度的所有季度
-      let count = 0
-      while (lastYear < currentYear || (lastYear === currentYear && lastQuarter < currentQuarter)) {
-        lastQuarter++
-        if (lastQuarter > 4) {
-          lastQuarter = 1
-          lastYear++
-        }
-        const newCategory = `${lastYear}Q${lastQuarter}`
-        categories.push(newCategory)
-        frequency.push(0)
-        magnitude.push(0)
-        // 2026年的数据标记为不完整
-        completeness.push(lastYear !== currentYear)
-        count++
-      }
-      console.log('补全了', count, '个季度, 最终:', categories.slice(-3))
-    } else {
-      console.log('无法解析最后一个季度格式:', lastCategory)
-    }
-  } else if (granularity === 'monthly') {
-    // 解析最后一个月份
-    const match = lastCategory.match(/(\d{4})-(\d{2})/)
-    if (match) {
-      let lastYear = parseInt(match[1])
-      let lastMonth = parseInt(match[2])
-      
-      // 生成从最后一个月份到2026年当前月的所有月份
-      while (lastYear < currentYear || (lastYear === currentYear && lastMonth < currentMonth)) {
-        lastMonth++
-        if (lastMonth > 12) {
-          lastMonth = 1
-          lastYear++
-        }
-        const newCategory = `${lastYear}-${String(lastMonth).padStart(2, '0')}`
-        categories.push(newCategory)
-        frequency.push(0)
-        magnitude.push(0)
-        // 2026年的数据标记为不完整
-        completeness.push(lastYear !== currentYear)
-      }
-    }
-  } else if (granularity === 'yearly') {
-    // 解析最后一年
-    const lastYear = parseInt(lastCategory)
-    
-    // 生成从最后一年到2026年的所有年份
-    for (let y = lastYear + 1; y <= currentYear; y++) {
-      categories.push(String(y))
-      frequency.push(0)
-      magnitude.push(0)
-      // 2026年标记为不完整
-      completeness.push(y !== currentYear)
-    }
-  }
-  
-  return {
-    categories,
-    frequency,
-    magnitude,
-    completeness
   }
 }
 
@@ -280,7 +172,6 @@ const updateChart = () => {
   const data = rawData.value
   const config = granularityConfig.value
   const granularity = timeGranularity.value
-  // eslint-disable-next-line no-unused-vars
   const dataLength = data.categories.length
   
   const freqRange = calculateYAxisRange(data.frequency, 0.15)
@@ -502,13 +393,10 @@ const updateChart = () => {
           fontSize: 11
         },
         labelFormatter: (value) => {
-          // 使用 rawData.value 获取最新数据，避免闭包问题
-          const currentData = rawData.value
-          const currentLength = currentData.categories.length
-          const currentGranularity = timeGranularity.value
-          const idx = Math.floor(value / 100 * (currentLength - 1))
-          const category = currentData.categories[Math.min(idx, currentLength - 1)]
-          return formatTimeLabel(category, currentGranularity)
+          // 使用闭包变量捕获当前数据和粒度
+          const idx = Math.floor(value / 100 * (dataLength - 1))
+          const category = data.categories[Math.min(idx, dataLength - 1)]
+          return formatTimeLabel(category, granularity)
         }
       }
     ],
