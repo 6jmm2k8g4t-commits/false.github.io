@@ -14,10 +14,20 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 }
 
 const getBaseURL = () => {
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  const hostname = window.location.hostname
+  
+  // GitHub Pages - 使用 Railway 后端
+  if (hostname.includes('github.io')) {
+    return 'https://earthquake-backend-production-d098.up.railway.app'
+  }
+  
+  // 本地开发环境
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:8090'
   }
-  return `http://${window.location.hostname}:8090`
+  
+  // 其他环境
+  return `http://${hostname}:8090`
 }
 
 axios.defaults.baseURL = getBaseURL()
