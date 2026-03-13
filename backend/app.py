@@ -367,7 +367,7 @@ def serve_static(path):
 
 @app.route('/api/time-series')
 def get_time_series():
-    """时序数据 - 标记不完整数据"""
+    """时序数据 - 标记不完整数据，补全到当前时间"""
     try:
         granularity = request.args.get('granularity', 'monthly')
         magnitude_filter = request.args.get('magnitude', 'all')
@@ -395,34 +395,69 @@ def get_time_series():
             filtered_df['period'] = filtered_df['time'].dt.year.astype(str)
             # 当年数据标记为不完整
             incomplete_periods = [str(current_year)]
+            # 生成完整的年份列表（从数据最早年份到当前年）
+            min_year = filtered_df['time'].dt.year.min()
+            all_periods = [str(y) for y in range(min_year, current_year + 1)]
         elif granularity == 'quarterly':
             # 格式：2020Q1, 2020Q2, 2020Q3, 2020Q4
             filtered_df['period'] = filtered_df['time'].dt.year.astype(str) + 'Q' + ((filtered_df['time'].dt.month - 1) // 3 + 1).astype(str)
             # 当前季度及之后标记为不完整
             incomplete_periods = [f'{current_year}Q{i}' for i in range(current_quarter, 5)]
+            # 生成完整的季度列表（从数据最早时间到当前季度）
+            min_year = filtered_df['time'].dt.year.min()
+            min_month = filtered_df[filtered_df['time'].dt.year == min_year]['time'].dt.month.min()
+            min_quarter = (min_month - 1) // 3 + 1
+            all_periods = []
+            for y in range(min_year, current_year + 1):
+                start_q = min_quarter if y == min_year else 1
+                end_q = current_quarter if y == current_year else 4
+                for q in range(start_q, end_q + 1):
+                    all_periods.append(f'{y}Q{q}')
         else:  # monthly
             filtered_df['period'] = filtered_df['time'].dt.to_period('M').astype(str)
             # 当前月及之后标记为不完整
             incomplete_periods = [f'{current_year}-{str(i).zfill(2)}' for i in range(current_month, 13)]
+            # 生成完整的月份列表（从数据最早时间到当前月）
+            min_year = filtered_df['time'].dt.year.min()
+            min_month = filtered_df[filtered_df['time'].dt.year == min_year]['time'].dt.month.min()
+            all_periods = []
+            for y in range(min_year, current_year + 1):
+                start_m = min_month if y == min_year else 1
+                end_m = current_month if y == current_year else 12
+                for m in range(start_m, end_m + 1):
+                    all_periods.append(f'{y}-{str(m).zfill(2)}')
         
         grouped = filtered_df.groupby('period').agg({
             'magnitude': ['count', 'mean', 'max']
         }).reset_index()
         grouped.columns = ['period', 'frequency', 'avg_magnitude', 'max_magnitude']
         
-        # 按时间排序
-        grouped = grouped.sort_values('period')
+        # 创建完整的时间序列数据（补全缺失的时间段）
+        grouped_dict = grouped.set_index('period').to_dict('index')
         
-        # 标记完整/不完整数据
-        categories = grouped['period'].tolist()
-        completeness = [cat not in incomplete_periods for cat in categories]
+        categories = []
+        frequency = []
+        magnitude = []
+        completeness = []
+        
+        for period in all_periods:
+            categories.append(period)
+            if period in grouped_dict:
+                frequency.append(int(grouped_dict[period]['frequency']))
+                magnitude.append(float(grouped_dict[period]['avg_magnitude']))
+            else:
+                # 缺失的时间段填充0
+                frequency.append(0)
+                magnitude.append(0.0)
+            # 标记完整/不完整数据
+            completeness.append(period not in incomplete_periods)
         
         return jsonify({
             'success': True,
             'data': {
                 'categories': categories,
-                'frequency': grouped['frequency'].tolist(),
-                'magnitude': grouped['avg_magnitude'].round(2).tolist(),
+                'frequency': frequency,
+                'magnitude': [round(m, 2) for m in magnitude],
                 'completeness': completeness  # True=完整, False=不完整
             }
         })
