@@ -170,6 +170,8 @@ const loadData = async () => {
 
 // 补全数据到2026年当前季度
 const completeDataTo2026 = (data, granularity) => {
+  console.log('completeDataTo2026 输入:', granularity, data.categories.slice(-3))
+  
   const categories = [...data.categories]
   const frequency = [...data.frequency]
   const magnitude = [...data.magnitude]
@@ -180,17 +182,36 @@ const completeDataTo2026 = (data, granularity) => {
   const currentMonth = now.getMonth() + 1
   const currentQuarter = Math.ceil(currentMonth / 3)
   
+  console.log('当前时间:', currentYear, '年', currentMonth, '月', 'Q', currentQuarter)
+  
   // 获取最后一个数据点的时间
   const lastCategory = categories[categories.length - 1]
+  console.log('最后一个数据:', lastCategory)
   
   if (granularity === 'quarterly') {
-    // 解析最后一个季度
-    const match = lastCategory.match(/(\d{4})Q(\d)/)
+    // 解析最后一个季度 - 支持 2020Q1 或 2020-03 格式
+    let match = lastCategory.match(/(\d{4})Q(\d)/)
+    
+    // 如果不是 Q 格式，尝试从月份格式转换
+    if (!match) {
+      const monthMatch = lastCategory.match(/(\d{4})-(\d{2})/)
+      if (monthMatch) {
+        const year = monthMatch[1]
+        const month = parseInt(monthMatch[2])
+        const quarter = Math.ceil(month / 3)
+        match = [null, year, String(quarter)]
+        console.log('从月份格式转换:', lastCategory, '->', year + 'Q' + quarter)
+      }
+    }
+    
     if (match) {
       let lastYear = parseInt(match[1])
       let lastQuarter = parseInt(match[2])
       
+      console.log('开始补全季度:', lastYear, 'Q', lastQuarter, '->', currentYear, 'Q', currentQuarter)
+      
       // 生成从最后一个季度到2026年当前季度的所有季度
+      let count = 0
       while (lastYear < currentYear || (lastYear === currentYear && lastQuarter < currentQuarter)) {
         lastQuarter++
         if (lastQuarter > 4) {
@@ -203,7 +224,11 @@ const completeDataTo2026 = (data, granularity) => {
         magnitude.push(0)
         // 2026年的数据标记为不完整
         completeness.push(lastYear !== currentYear)
+        count++
       }
+      console.log('补全了', count, '个季度, 最终:', categories.slice(-3))
+    } else {
+      console.log('无法解析最后一个季度格式:', lastCategory)
     }
   } else if (granularity === 'monthly') {
     // 解析最后一个月份
