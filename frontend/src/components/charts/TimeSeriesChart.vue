@@ -474,11 +474,11 @@ const updateChart = () => {
         }
       }
     ],
-    dataZoom: dataLength > 30 ? [
+    dataZoom: [
       {
         type: 'inside',
-        start: Math.max(0, config.defaultZoomEnd - 100),
-        end: config.defaultZoomEnd,
+        start: 0,
+        end: 100,
         zoomOnMouseWheel: true,
         moveOnMouseMove: true
       },
@@ -487,8 +487,8 @@ const updateChart = () => {
         show: true,
         height: 20,
         bottom: 50,
-        start: Math.max(0, config.defaultZoomEnd - 100),
-        end: config.defaultZoomEnd,
+        start: 0,
+        end: 100,
         borderColor: 'transparent',
         backgroundColor: '#f1f5f9',
         fillerColor: 'rgba(102, 126, 234, 0.2)',
@@ -501,12 +501,12 @@ const updateChart = () => {
           fontSize: 11
         },
         labelFormatter: (value) => {
-          const idx = Math.floor(value / 100 * dataLength)
+          const idx = Math.floor(value / 100 * (dataLength - 1))
           const category = data.categories[Math.min(idx, dataLength - 1)]
           return formatTimeLabel(category, granularity)
         }
       }
-    ] : [],
+    ],
     series: [
       {
         name: '地震频次',
