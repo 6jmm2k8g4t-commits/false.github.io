@@ -75,6 +75,11 @@ def root():
 
 df = None
 df_filtered_cache = {}
+_high_risk_regions_cache = None
+
+# 在模块加载时立即加载数据（用于云平台部署）
+print("🔄 开始加载地震数据...")
+load_data()
 
 def gzip_response(f):
     @wraps(f)
