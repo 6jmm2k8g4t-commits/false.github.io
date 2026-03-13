@@ -93,7 +93,7 @@ const granularityConfig = computed(() => {
     },
     quarterly: {
       rotate: 0,
-      interval: Math.floor(dataLength / 20),
+      interval: Math.floor(dataLength / 12),
       xAxisTitle: '季度',
       barWidth: Math.min(40, Math.max(15, 800 / Math.max(dataLength, 1))),
       defaultZoomEnd: Math.min(100, Math.max(50, (36 / Math.max(dataLength, 1)) * 100)),

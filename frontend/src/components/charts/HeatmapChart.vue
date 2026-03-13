@@ -85,9 +85,15 @@ const updateChart = async () => {
     try {
       const response = await axios.get(`/api/kernel-density?bandwidth=${bandwidth.value}&grid_size=60`)
       if (response.data.success) {
-        data = response.data.data.heatmap.map(item => ({
-          value: [item.longitude, item.latitude, item.density * 10]
-        }))
+        // 过滤掉低密度的点，只显示高密度区域
+        const heatmapData = response.data.data.heatmap
+        const maxDensity = Math.max(...heatmapData.map(item => item.density))
+        const threshold = maxDensity * 0.1 // 只显示密度值大于最大密度10%的点
+        data = heatmapData
+          .filter(item => item.density > threshold)
+          .map(item => ({
+            value: [item.longitude, item.latitude, item.density]
+          }))
       }
     } catch (error) {
       console.error('加载核密度数据失败:', error)
@@ -236,7 +242,7 @@ const updateChart = async () => {
     },
     visualMap: {
       min: 0,
-      max: selectedMode.value === 'kde' ? 10 : 8,
+      max: selectedMode.value === 'kde' ? 'dataMax' : 8,
       calculable: true,
       orient: 'horizontal',
       left: 'center',
