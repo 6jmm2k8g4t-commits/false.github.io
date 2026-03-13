@@ -43,19 +43,52 @@ except ImportError:
 
 app = Flask(__name__)
 
-# 配置 CORS - 允许所有来源访问（用于 GitHub Pages）
+# 配置 CORS - 限制允许的来源（安全优化）
+ALLOWED_ORIGINS = [
+    "https://6jmm2k8g4t-commits.github.io",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:8090",
+    "http://127.0.0.1:8090"
+]
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["*"],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "supports_credentials": True,
+        "origins": ALLOWED_ORIGINS,
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": False,
         "max_age": 3600
     }
 })
 
 app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+
+# 输入验证函数
+def validate_granularity(value):
+    """验证时间粒度参数"""
+    allowed = ['yearly', 'quarterly', 'monthly']
+    return value if value in allowed else 'monthly'
+
+def validate_magnitude_filter(value):
+    """验证震级筛选参数"""
+    allowed = ['all', 'high', 'medium', 'low']
+    return value if value in allowed else 'all'
+
+def validate_model(value):
+    """验证预测模型参数"""
+    allowed = ['arima', 'prophet', 'ensemble']
+    return value if value in allowed else 'arima'
+
+def sanitize_string(value, max_length=100):
+    """清理字符串输入，防止XSS"""
+    if not isinstance(value, str):
+        return ''
+    # 移除潜在的危险字符
+    import re
+    value = re.sub(r'[<>&"\']', '', value)
+    return value[:max_length]
 
 # 健康检查接口
 @app.route('/api/health')
@@ -365,24 +398,44 @@ def serve_static(path):
     except Exception as e:
         return f"<h1>错误</h1><p>无法加载资源: {e}</p>", 404
 
+# 时序数据缓存
+_time_series_cache = {}
+_time_series_cache_time = {}
+
 @app.route('/api/time-series')
 def get_time_series():
-    """时序数据 - 标记不完整数据，补全到当前时间"""
+    """时序数据 - 标记不完整数据，补全到当前时间（带缓存）"""
     try:
-        granularity = request.args.get('granularity', 'monthly')
-        magnitude_filter = request.args.get('magnitude', 'all')
+        # 输入验证
+        granularity = validate_granularity(request.args.get('granularity', 'monthly'))
+        magnitude_filter = validate_magnitude_filter(request.args.get('magnitude', 'all'))
         
         if df is None:
             return jsonify({'success': False, 'error': '数据未加载'}), 500
         
-        # 应用震级筛选
-        filtered_df = df.copy()
+        # 缓存键
+        cache_key = f"{granularity}_{magnitude_filter}"
+        cache_timeout = 300  # 5分钟缓存
+        
+        # 检查缓存
+        if cache_key in _time_series_cache:
+            cache_time = _time_series_cache_time.get(cache_key, 0)
+            if time.time() - cache_time < cache_timeout:
+                return jsonify({
+                    'success': True,
+                    'data': _time_series_cache[cache_key],
+                    'cached': True
+                })
+        
+        # 应用震级筛选（使用视图而非复制）
         if magnitude_filter == 'high':
-            filtered_df = filtered_df[filtered_df['magnitude'] >= 6.0]
+            filtered_df = df[df['magnitude'] >= 6.0]
         elif magnitude_filter == 'medium':
-            filtered_df = filtered_df[(filtered_df['magnitude'] >= 4.0) & (filtered_df['magnitude'] < 6.0)]
+            filtered_df = df[(df['magnitude'] >= 4.0) & (df['magnitude'] < 6.0)]
         elif magnitude_filter == 'low':
-            filtered_df = filtered_df[filtered_df['magnitude'] < 4.0]
+            filtered_df = df[df['magnitude'] < 4.0]
+        else:
+            filtered_df = df
         
         # 获取当前日期
         now = datetime.now()
@@ -452,14 +505,22 @@ def get_time_series():
             # 标记完整/不完整数据
             completeness.append(period not in incomplete_periods)
         
+        # 构建结果
+        result_data = {
+            'categories': categories,
+            'frequency': frequency,
+            'magnitude': [round(m, 2) for m in magnitude],
+            'completeness': completeness  # True=完整, False=不完整
+        }
+        
+        # 保存到缓存
+        _time_series_cache[cache_key] = result_data
+        _time_series_cache_time[cache_key] = time.time()
+        
         return jsonify({
             'success': True,
-            'data': {
-                'categories': categories,
-                'frequency': frequency,
-                'magnitude': [round(m, 2) for m in magnitude],
-                'completeness': completeness  # True=完整, False=不完整
-            }
+            'data': result_data,
+            'cached': False
         })
     except Exception as e:
         import traceback

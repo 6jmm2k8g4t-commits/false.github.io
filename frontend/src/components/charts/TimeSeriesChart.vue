@@ -112,13 +112,8 @@ const granularityConfig = computed(() => {
 })
 
 const handleGranularityChange = () => {
-  // 销毁旧图表并重新创建，确保 dataZoom 完全重新初始化
-  if (chart) {
-    chart.dispose()
-    chart = null
-  }
-  rawData.value = { categories: [], frequency: [], magnitude: [] }
-  initChart()
+  // 优化：不清空数据，直接重新加载，使用 setOption 增量更新
+  loadData()
 }
 
 const initChart = () => {
@@ -148,14 +143,28 @@ const calculateYAxisRange = (data, padding = 0.1) => {
   }
 }
 
+// 数据缓存
+const dataCache = new Map()
+
 const loadData = async () => {
   try {
-    // 添加时间戳防止缓存
-    const timestamp = new Date().getTime()
-    const response = await axios.get(`/api/time-series?granularity=${timeGranularity.value}&magnitude=all&_t=${timestamp}`)
+    const cacheKey = `${timeGranularity.value}`
+    
+    // 检查缓存
+    if (dataCache.has(cacheKey)) {
+      console.log('使用缓存数据:', timeGranularity.value)
+      rawData.value = dataCache.get(cacheKey)
+      updateChart()
+      return
+    }
+    
+    const response = await axios.get(`/api/time-series?granularity=${timeGranularity.value}&magnitude=all`)
     
     if (response.data.success && response.data.data) {
       const data = response.data.data
+      
+      // 缓存数据
+      dataCache.set(cacheKey, data)
       
       // 后端已经补全数据到2026年，前端直接使用
       rawData.value = data
@@ -470,7 +479,8 @@ const updateChart = () => {
     ]
   }
   
-  chart.setOption(option, true)
+  // 优化：使用 notMerge=true 和 lazyUpdate=false 确保图表正确更新
+  chart.setOption(option, { notMerge: true, lazyUpdate: false })
 }
 
 onMounted(() => {
