@@ -81,6 +81,8 @@ const updateChart = async () => {
   
   let data = []
   
+  let maxDataValue = 8 // 默认值
+  
   if (selectedMode.value === 'kde') {
     try {
       const response = await axios.get(`/api/kernel-density?bandwidth=${bandwidth.value}&grid_size=60`)
@@ -88,6 +90,7 @@ const updateChart = async () => {
         // 过滤掉低密度的点，只显示高密度区域
         const heatmapData = response.data.data.heatmap
         const maxDensity = Math.max(...heatmapData.map(item => item.density))
+        maxDataValue = maxDensity
         const threshold = maxDensity * 0.1 // 只显示密度值大于最大密度10%的点
         data = heatmapData
           .filter(item => item.density > threshold)
@@ -242,7 +245,7 @@ const updateChart = async () => {
     },
     visualMap: {
       min: 0,
-      max: selectedMode.value === 'kde' ? 'dataMax' : 8,
+      max: maxDataValue,
       calculable: true,
       orient: 'horizontal',
       left: 'center',
@@ -258,7 +261,12 @@ const updateChart = async () => {
         color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', 
                 '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
       },
-      formatter: (value) => value.toFixed(1)
+      formatter: (value) => {
+        if (typeof value === 'number') {
+          return value.toFixed(1)
+        }
+        return value
+      }
     },
     series: [{
       type: 'scatter',
@@ -267,8 +275,7 @@ const updateChart = async () => {
       itemStyle: {
         color: (params) => {
           const value = params.value[2]
-          const max = selectedMode.value === 'kde' ? 10 : 8
-          const ratio = value / max
+          const ratio = value / maxDataValue
           // 根据值返回颜色
           const colors = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', 
                           '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
