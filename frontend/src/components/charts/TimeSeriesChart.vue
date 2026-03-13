@@ -112,12 +112,13 @@ const granularityConfig = computed(() => {
 })
 
 const handleGranularityChange = () => {
-  // 清空数据强制重新加载
-  rawData.value = { categories: [], frequency: [], magnitude: [] }
+  // 销毁旧图表并重新创建，确保 dataZoom 完全重新初始化
   if (chart) {
-    chart.clear()
+    chart.dispose()
+    chart = null
   }
-  loadData()
+  rawData.value = { categories: [], frequency: [], magnitude: [] }
+  initChart()
 }
 
 const initChart = () => {
@@ -393,10 +394,14 @@ const updateChart = () => {
           fontSize: 11
         },
         labelFormatter: (value) => {
-          // 使用闭包变量捕获当前数据和粒度
-          const idx = Math.floor(value / 100 * (dataLength - 1))
-          const category = data.categories[Math.min(idx, dataLength - 1)]
-          return formatTimeLabel(category, granularity)
+          // 只在滑块两端（0% 和 100%）显示标签
+          if (value <= 0) {
+            return formatTimeLabel(data.categories[0], granularity)
+          } else if (value >= 100) {
+            return formatTimeLabel(data.categories[dataLength - 1], granularity)
+          }
+          // 中间位置不显示标签
+          return ''
         }
       }
     ],
