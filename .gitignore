@@ -10,7 +10,7 @@ backend/venv/
 backend/.env
 
 # Build outputs
-frontend/dist/
+# frontend/dist/  # 注释掉，因为 GitHub Pages 需要 dist 目录
 *.log
 
 # Database
