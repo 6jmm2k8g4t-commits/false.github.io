@@ -31,12 +31,33 @@ def main():
     current_dir = os.getcwd()
     print(f"\n📁 当前目录: {current_dir}")
     
-    # 2. 安装依赖
-    if not run_command("pip install -r requirements.txt", "安装 Python 依赖"):
-        print("❌ 依赖安装失败")
-        return False
+    # 2. 检查已安装的包
+    print("\n📦 检查已安装的 Python 包...")
+    run_command("pip list | grep -i flask", "Flask 相关包")
+    run_command("pip list | grep -i pandas", "Pandas 相关包")
     
-    # 3. 检查数据文件
+    # 3. 尝试安装依赖（如果失败则跳过）
+    print("\n📦 尝试安装依赖...")
+    print("   如果失败，请手动在 PythonAnywhere 的 'Consoles' 页面安装")
+    
+    # 设置临时目录
+    os.environ['TMPDIR'] = os.path.expanduser('~/tmp')
+    os.makedirs(os.environ['TMPDIR'], exist_ok=True)
+    
+    # 尝试安装，但失败不退出
+    result = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'TMPDIR': os.environ['TMPDIR']}
+    )
+    if result.returncode == 0:
+        print("✅ 依赖安装成功")
+    else:
+        print("⚠️  依赖安装失败（可能已安装或权限问题）")
+        print("   错误信息:", result.stderr[:200] if result.stderr else "无")
+    
+    # 4. 检查数据文件
     data_file = os.environ.get('DATA_FILE_PATH', 'earthquake_dataset.csv')
     if os.path.exists(data_file):
         size_mb = os.path.getsize(data_file) / (1024 * 1024)
@@ -45,14 +66,14 @@ def main():
         print(f"\n⚠️  数据文件不存在: {data_file}")
         print("   请上传数据文件到项目目录")
     
-    # 4. 检查后端代码
+    # 5. 检查后端代码
     if os.path.exists('backend/app.py'):
         print("✅ 后端代码存在")
     else:
         print("❌ 后端代码不存在")
         return False
     
-    # 5. 测试导入
+    # 6. 测试导入
     print("\n🧪 测试后端导入...")
     try:
         sys.path.insert(0, current_dir)
@@ -60,6 +81,9 @@ def main():
         print("✅ 后端导入成功")
     except Exception as e:
         print(f"❌ 后端导入失败: {e}")
+        print("\n可能的解决方案：")
+        print("1. 在 PythonAnywhere 的 'Consoles' 页面手动运行: pip install flask flask-cors pandas numpy matplotlib")
+        print("2. 检查是否有缺失的依赖包")
         return False
     
     print("\n" + "=" * 60)
