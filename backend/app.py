@@ -5,7 +5,6 @@
 """
 
 from flask import Flask, jsonify, request, send_from_directory, Response
-from flask_cors import CORS
 import pandas as pd
 import numpy as np
 import os
@@ -52,15 +51,18 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:8090"
 ]
 
-CORS(app, resources={
-    r"/api/*": {
-        "origins": ALLOWED_ORIGINS,
-        "methods": ["GET", "POST", "OPTIONS"],
-        "allow_headers": ["Content-Type"],
-        "supports_credentials": False,
-        "max_age": 3600
-    }
-})
+@app.after_request
+def after_request(response):
+    """添加 CORS 头，替代 flask_cors"""
+    origin = request.headers.get('Origin', '')
+    if origin in ALLOWED_ORIGINS:
+        response.headers['Access-Control-Allow-Origin'] = origin
+    else:
+        response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    return response
 
 app.config['JSON_SORT_KEYS'] = False
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024

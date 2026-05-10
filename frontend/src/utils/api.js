@@ -3,10 +3,10 @@ import axios from 'axios'
 const getBaseURL = () => {
   const hostname = window.location.hostname
   
-  // GitHub Pages 部署环境 - 使用 Render 后端（免费）
+  // GitHub Pages 部署环境 - 使用 PythonAnywhere 后端（免费）
   if (hostname.includes('github.io')) {
-    console.log('[INFO] Using Render API: https://earthquake-backend.onrender.com')
-    return 'https://earthquake-backend.onrender.com'
+    console.log('[INFO] Using PythonAnywhere API: https://flase.pythonanywhere.com')
+    return 'https://flase.pythonanywhere.com'
   }
   
   // 本地开发环境
