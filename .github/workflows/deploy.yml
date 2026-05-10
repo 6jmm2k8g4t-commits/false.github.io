@@ -37,10 +37,13 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
+      - name: Copy dist to root
+        run: cp -r ./frontend/dist/* .
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './frontend/dist'
+          path: '.'
 
   deploy:
     environment:
