@@ -3,20 +3,20 @@ import axios from 'axios'
 const getBaseURL = () => {
   const hostname = window.location.hostname
   
-  // GitHub Pages 部署环境 - 使用 Railway 后端（必须放在最前面）
+  // GitHub Pages 部署环境 - 使用 Render 后端（免费）
   if (hostname.includes('github.io')) {
-    console.log('🚀 Using Railway API: https://earthquake-backend-production-d098.up.railway.app')
-    return 'https://earthquake-backend-production-d098.up.railway.app'
+    console.log('[INFO] Using Render API: https://earthquake-backend.onrender.com')
+    return 'https://earthquake-backend.onrender.com'
   }
   
   // 本地开发环境
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    console.log(' Using local API: http://localhost:8090')
+    console.log('[INFO] Using local API: http://localhost:8090')
     return 'http://localhost:8090'
   }
   
   // 其他生产环境（默认回退）
-  console.log('⚠️ Using default API:', `http://${hostname}:8090`)
+  console.log('[WARN] Using default API:', `http://${hostname}:8090`)
   return `http://${hostname}:8090`
 }
 
