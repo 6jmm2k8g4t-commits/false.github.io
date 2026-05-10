@@ -16,9 +16,9 @@ for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
 const getBaseURL = () => {
   const hostname = window.location.hostname
   
-  // GitHub Pages - 使用 Railway 后端
+  // GitHub Pages - 使用 PythonAnywhere 后端
   if (hostname.includes('github.io')) {
-    return 'https://earthquake-backend-production-d098.up.railway.app'
+    return 'https://flase.pythonanywhere.com'
   }
   
   // 本地开发环境
