@@ -1177,12 +1177,11 @@ def get_earthquake_distribution():
 
 @app.route('/api/high-risk-regions')
 def get_high_risk_regions():
-    """获取高风险区域TOP10 - 使用缓存"""
+    """获取高风险区域TOP10 - 自定义固定排名"""
     try:
         if df is None:
             return jsonify({'success': False, 'error': '数据未加载'}), 500
-        
-        sort_by = request.args.get('sort', 'magnitude')
+
         limit = int(request.args.get('limit', 10))
 
         # 使用缓存数据
@@ -1190,34 +1189,30 @@ def get_high_risk_regions():
         if _high_risk_regions_cache is None:
             _high_risk_regions_cache = _compute_high_risk_regions()
 
-        data = _high_risk_regions_cache
+        # 构建名称到数据的映射
+        data_map = {d['name']: d for d in _high_risk_regions_cache if d['name'] != '其他海域'}
 
-        # 排除"其他海域"
-        data = [d for d in data if d['name'] != '其他海域']
+        # 自定义固定排名顺序
+        custom_order = [
+            '日本',
+            '印度尼西亚',
+            '智利',
+            '美国加利福尼亚',
+            '菲律宾',
+            '俄罗斯堪察加',
+            '墨西哥',
+            '秘鲁',
+            '土耳其',
+            '意大利/希腊'
+        ]
 
-        # 强制置顶区域（固定顺序：日本、印度尼西亚、智利）
-        pinned_order = ['日本', '印度尼西亚', '智利']
-        pinned_map = {}
-        other_data = []
-        for d in data:
-            if d['name'] in pinned_order:
-                pinned_map[d['name']] = d
-            else:
-                other_data.append(d)
+        # 按固定顺序组装结果
+        result = []
+        for name in custom_order:
+            if name in data_map:
+                result.append(data_map[name])
 
-        # 按固定顺序组装置顶区域
-        pinned_data = [pinned_map[name] for name in pinned_order if name in pinned_map]
-
-        # 对其余区域按指定方式排序
-        if sort_by == 'frequency':
-            other_data = sorted(other_data, key=lambda x: x['frequency'], reverse=True)
-        else:
-            other_data = sorted(other_data, key=lambda x: x['maxMagnitude'], reverse=True)
-
-        # 合并：置顶区域在前（固定顺序），其余在后
-        data = pinned_data + other_data
-
-        return jsonify({'success': True, 'data': data[:limit]})
+        return jsonify({'success': True, 'data': result[:limit]})
     except Exception as e:
         import traceback
         print(f"高风险区域错误: {e}")
