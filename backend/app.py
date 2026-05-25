@@ -1195,18 +1195,18 @@ def get_high_risk_regions():
         # 排除"其他海域"
         data = [d for d in data if d['name'] != '其他海域']
 
-        # 强制置顶区域（日本、印度尼西亚、智利始终排前三）
-        pinned = ['日本', '印度尼西亚', '智利']
-        pinned_data = []
+        # 强制置顶区域（固定顺序：日本、印度尼西亚、智利）
+        pinned_order = ['日本', '印度尼西亚', '智利']
+        pinned_map = {}
         other_data = []
         for d in data:
-            if d['name'] in pinned:
-                pinned_data.append(d)
+            if d['name'] in pinned_order:
+                pinned_map[d['name']] = d
             else:
                 other_data.append(d)
 
-        # 对置顶区域内部按震级排序
-        pinned_data = sorted(pinned_data, key=lambda x: x['maxMagnitude'], reverse=True)
+        # 按固定顺序组装置顶区域
+        pinned_data = [pinned_map[name] for name in pinned_order if name in pinned_map]
 
         # 对其余区域按指定方式排序
         if sort_by == 'frequency':
@@ -1214,7 +1214,7 @@ def get_high_risk_regions():
         else:
             other_data = sorted(other_data, key=lambda x: x['maxMagnitude'], reverse=True)
 
-        # 合并：置顶区域在前，其余在后
+        # 合并：置顶区域在前（固定顺序），其余在后
         data = pinned_data + other_data
 
         return jsonify({'success': True, 'data': data[:limit]})
