@@ -139,24 +139,34 @@ def _compute_high_risk_regions():
     # 创建区域标签数组
     regions = np.full(len(df), "其他海域", dtype=object)
     
-    # 定义区域条件
+    # 定义区域条件 - 精确到主要地震带核心区域
     conditions = [
-        ((lat >= 25) & (lat <= 45) & (lon >= 130) & (lon <= 145), "日本"),
-        ((lat >= 35) & (lat <= 42) & (lon >= -125) & (lon <= -115), "美国加利福尼亚"),
-        ((lat >= -40) & (lat <= -30) & (lon >= -75) & (lon <= -65), "智利"),
-        ((lat >= -10) & (lat <= 10) & (lon >= 95) & (lon <= 140), "印度尼西亚"),
-        ((lat >= 35) & (lat <= 45) & (lon >= 25) & (lon <= 45), "土耳其"),
-        ((lat >= 20) & (lat <= 55) & (lon >= 70) & (lon <= 140), "中国"),
-        ((lat >= -5) & (lat <= 10) & (lon >= 115) & (lon <= 130), "菲律宾"),
-        ((lat >= -50) & (lat <= -10) & (lon >= 110) & (lon <= 155), "澳大利亚"),
-        ((lat >= 50) & (lat <= 70) & (lon >= 160) & (lon <= 180), "俄罗斯远东"),
-        ((lat >= -40) & (lat <= -20) & (lon >= 165) & (lon <= 180), "新西兰"),
-        ((lat >= 15) & (lat <= 30) & (lon >= -100) & (lon <= -80), "墨西哥"),
-        ((lat >= -10) & (lat <= 5) & (lon >= -85) & (lon <= -70), "秘鲁/厄瓜多尔"),
-        ((lat >= 50) & (lat <= 60) & (lon >= -10) & (lon <= 5), "英国"),
-        ((lat >= 35) & (lat <= 45) & (lon >= -10) & (lon <= 5), "西班牙/葡萄牙"),
-        ((lat >= 35) & (lat <= 50) & (lon >= 5) & (lon <= 20), "意大利/希腊"),
-        ((lat >= -5) & (lat <= 5) & (lon >= 30) & (lon <= 45), "东非"),
+        # 日本列岛（本州、北海道、九州、四国）
+        ((lat >= 31) & (lat <= 46) & (lon >= 130) & (lon <= 143), "日本"),
+        # 印度尼西亚（苏门答腊、爪哇、苏拉威西、巴厘岛）
+        ((lat >= -8) & (lat <= 6) & (lon >= 95) & (lon <= 141), "印度尼西亚"),
+        # 智利（安第斯山脉西坡，排除阿根廷一侧）
+        ((lat >= -42) & (lat <= -18) & (lon >= -75) & (lon <= -69), "智利"),
+        # 美国加利福尼亚（圣安德烈斯断层沿线，缩小范围）
+        ((lat >= 34) & (lat <= 39) & (lon >= -122) & (lon <= -117), "美国加利福尼亚"),
+        # 中国东部（华北、华东、华南，排除西部高原）
+        ((lat >= 22) & (lat <= 41) & (lon >= 105) & (lon <= 123), "中国"),
+        # 菲律宾群岛
+        ((lat >= 5) & (lat <= 20) & (lon >= 117) & (lon <= 127), "菲律宾"),
+        # 墨西哥南部（瓦哈卡、恰帕斯）
+        ((lat >= 15) & (lat <= 20) & (lon >= -100) & (lon <= -92), "墨西哥"),
+        # 秘鲁（安第斯山脉西坡）
+        ((lat >= -18) & (lat <= -5) & (lon >= -82) & (lon <= -72), "秘鲁"),
+        # 新西兰北岛和南岛
+        ((lat >= -42) & (lat <= -35) & (lon >= 173) & (lon <= 179), "新西兰"),
+        # 土耳其（安纳托利亚断层）
+        ((lat >= 36) & (lat <= 42) & (lon >= 26) & (lon <= 45), "土耳其"),
+        # 俄罗斯堪察加
+        ((lat >= 52) & (lat <= 57) & (lon >= 158) & (lon <= 165), "俄罗斯堪察加"),
+        # 台湾
+        ((lat >= 22) & (lat <= 26) & (lon >= 120) & (lon <= 122), "台湾"),
+        # 意大利/希腊（地中海地震带）
+        ((lat >= 37) & (lat <= 41) & (lon >= 12) & (lon <= 29), "意大利/希腊"),
     ]
     
     for condition, name in conditions:
@@ -1172,21 +1182,24 @@ def get_high_risk_regions():
         if df is None:
             return jsonify({'success': False, 'error': '数据未加载'}), 500
         
-        sort_by = request.args.get('sort', 'frequency')
+        sort_by = request.args.get('sort', 'magnitude')
         limit = int(request.args.get('limit', 10))
-        
+
         # 使用缓存数据
         global _high_risk_regions_cache
         if _high_risk_regions_cache is None:
             _high_risk_regions_cache = _compute_high_risk_regions()
-        
+
         data = _high_risk_regions_cache
-        
-        # 排序
-        if sort_by == 'magnitude':
-            data = sorted(data, key=lambda x: x['maxMagnitude'], reverse=True)
-        else:
+
+        # 排除"其他海域"
+        data = [d for d in data if d['name'] != '其他海域']
+
+        # 默认按最大震级排序（更符合高风险定义）
+        if sort_by == 'frequency':
             data = sorted(data, key=lambda x: x['frequency'], reverse=True)
+        else:
+            data = sorted(data, key=lambda x: x['maxMagnitude'], reverse=True)
         
         return jsonify({'success': True, 'data': data[:limit]})
     except Exception as e:

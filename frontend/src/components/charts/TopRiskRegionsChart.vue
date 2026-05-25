@@ -21,7 +21,7 @@ import axios from 'axios'
 const chartRef = ref(null)
 let chart = null
 const loading = ref(false)
-const sortBy = ref('frequency')
+const sortBy = ref('magnitude')
 const rankingData = ref([])
 
 const axisTheme = {
